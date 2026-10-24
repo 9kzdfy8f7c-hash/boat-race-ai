@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#081b2c"><title>BOAT RACE AI</title>
+<style>
+:root{--bg:#071522;--panel:#102638;--panel2:#163247;--text:#f3f7fb;--muted:#a9bdcc;--accent:#38d6c5;--line:#294558;--gold:#ffd166}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(160deg,#071522,#0b2030 65%,#071522);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif}
+header{padding:24px 18px 18px;background:#081b2c;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+.brand{font-size:12px;letter-spacing:.18em;color:var(--accent);font-weight:800}.headline{font-size:24px;font-weight:900;margin:6px 0}.sub{font-size:12px;color:var(--muted)}
+main{max-width:820px;margin:auto;padding:14px 12px 44px}.card{background:rgba(16,38,56,.96);border:1px solid var(--line);border-radius:16px;padding:15px;margin:12px 0;box-shadow:0 8px 24px #0002}
+h2{font-size:16px;margin:0 0 12px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px}
+input,select,textarea{width:100%;border:1px solid #38566a;border-radius:10px;background:#071a29;color:var(--text);font-size:16px;padding:11px;min-width:0}
+button{border:0;border-radius:12px;padding:13px 15px;font-size:15px;font-weight:800;cursor:pointer}
+.primary{background:var(--accent);color:#05232b;width:100%;margin-top:12px}.secondary{background:#203d52;color:var(--text);border:1px solid #3a5c72}.small{padding:8px 10px;font-size:12px}
+.boat{border:1px solid var(--line);border-radius:12px;padding:10px;margin:8px 0;background:#0b2030}
+.boathead{display:flex;align-items:center;gap:8px;margin-bottom:9px;font-weight:800}.lane{width:28px;height:28px;border-radius:7px;display:grid;place-items:center;color:#111;font-weight:900}
+.boatfields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.boatfields label{font-size:11px;color:var(--muted)}.boatfields input{margin-top:4px;padding:9px}
+.results{display:none}.rankrow{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--line);gap:8px}.rankrow:last-child{border:0}.pill{background:#1d4854;color:#a6fff5;padding:5px 8px;border-radius:999px;font-size:12px;white-space:nowrap}
+.pick{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line)}.pick:last-child{border:0}.pick strong{font-size:17px}
+.noteout{min-height:190px;line-height:1.6}.muted{font-size:12px;color:var(--muted);line-height:1.6}.metricrow{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.metric{background:#0b2030;padding:10px;border-radius:10px}.metric small{display:block;color:var(--muted);font-size:11px}.metric strong{font-size:17px;display:block;margin-top:5px;overflow-wrap:anywhere}
+nav{display:flex;gap:8px;overflow:auto;padding:10px 0 2px}nav button{white-space:nowrap;background:#173348;color:var(--muted);padding:9px 12px;font-size:12px}nav button.active{background:var(--accent);color:#06242b}
+@media(min-width:650px){.boatsgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.boat{margin:0}.grid{grid-template-columns:repeat(4,1fr)}}
+</style>
+</head>
+<body>
+<header><div class="brand">BOAT RACE LAB</div><div class="headline">BOAT RACE AI</div><div class="sub">予想・買い目候補・成績管理・note文章作成</div></header>
+<main>
+<nav><button class="active" data-tab="predict">予想</button><button data-tab="history">成績管理</button><button data-tab="about">使い方</button></nav>
+<section id="predict">
+<div class="card"><h2>レース設定</h2><div class="grid">
+<div class="field"><label>競艇場</label><select id="venue"><option>津</option><option>住之江</option><option>若松</option><option>唐津</option><option>常滑</option><option>宮島</option><option>三国</option><option>丸亀</option><option>児島</option><option>蒲郡</option><option>平和島</option><option>戸田</option><option>江戸川</option><option>浜名湖</option><option>桐生</option><option>びわこ</option><option>尼崎</option><option>鳴門</option><option>徳山</option><option>下関</option><option>芦屋</option><option>福岡</option><option>大村</option></select></div>
+<div class="field"><label>レース番号</label><select id="race"></select></div>
+<div class="field"><label>風向</label><select id="winddir"><option>向かい風</option><option>追い風</option><option>横風</option><option>無風</option></select></div>
+<div class="field"><label>風速 (m/s)</label><input id="wind" type="number" min="0" max="15" value="2"></div>
+</div></div>
+<div class="card"><h2>6艇のデータ入力</h2><p class="muted">初期値は説明用のサンプルです。実際のレース情報に必ず置き換えてください。</p><div id="boats" class="boatsgrid"></div><button class="primary" id="calc">3連単候補を計算</button></div>
+<div id="results" class="results">
+<div class="card"><h2>総合評価</h2><div id="rankings"></div></div>
+<div class="card"><h2>3連単候補</h2><p class="muted">推定確率は仮ロジックによる参考値で、実測確率ではありません。</p><div id="picks"></div><button class="secondary" id="copyPicks" style="width:100%;margin-top:12px">買い目をコピー</button></div>
+<div class="card"><h2>note掲載用文章</h2><textarea id="noteout" class="noteout"></textarea><button class="primary" id="copyNote">文章をコピー</button></div>
+<div class="card"><h2>結果を記録</h2><div class="grid"><div class="field"><label>実際の3連単</label><input id="actual" placeholder="例：1-2-3"></div><div class="field"><label>購入額（円）</label><input id="stake" type="number" value="100"></div><div class="field"><label>払戻額（円）</label><input id="payout" type="number" value="0"></div><div class="field"><label>メモ</label><input id="memo" placeholder="任意"></div></div><button class="primary" id="saveResult">このレースを記録</button></div>
+</div>
+</section>
+<section id="history" style="display:none"><div class="card"><h2>保存した成績</h2><div class="metricrow"><div class="metric"><small>記録数</small><strong id="count">0</strong></div><div class="metric"><small>収支</small><strong id="profit">¥0</strong></div><div class="metric"><small>回収率</small><strong id="roi">—</strong></div></div><div id="historylist" style="margin-top:12px"></div><button class="secondary" id="export" style="width:100%;margin-top:12px">CSVで書き出す</button><button class="secondary" id="clear" style="width:100%;margin-top:8px">全記録を削除</button><p class="muted">記録はこのブラウザ内に保存されます。ブラウザのデータ削除や端末変更で失われる場合があります。</p></div></section>
+<section id="about" style="display:none"><div class="card"><h2>使い方</h2><ol><li>レース設定を選ぶ</li><li>各艇のデータを実際の情報に置き換える</li><li>「3連単候補を計算」を押す</li><li>必要ならnote用文章をコピー</li><li>結果が出たら購入額・払戻額を入力して記録</li></ol><p class="muted">現時点では自動データ取得、リアルタイムオッズ、学習済み機械学習モデルは搭載していません。勝率や回収率を保証するものではありません。購入は無理のない範囲で行ってください。</p></div></section>
+</main>
+<script>
+const laneColors=['#f7f7f7','#202832','#e33b45','#2779df','#f1d94b','#36a66b'];
+const samples=[['選手1',6.5,6.8,38,6.70,.15,1],['選手2',5.8,5.5,35,6.72,.17,.4],['選手3',5.4,5.9,42,6.69,.16,.3],['選手4',5.2,4.9,31,6.75,.18,.2],['選手5',4.8,4.5,28,6.77,.19,.1],['選手6',4.2,4.1,33,6.80,.20,0]];
+const fields=[['name','選手名','text'],['national','全国勝率','number'],['local','当地勝率','number'],['motor','モーター2連率 (%)','number'],['exhibit','展示タイム','number'],['st','平均ST','number'],['course','コース適性 (0〜1)','number']];
+const boats=document.getElementById('boats');
+for(let i=0;i<6;i++){let div=document.createElement('div');div.className='boat';div.innerHTML=`<div class="boathead"><span class="lane" style="background:${laneColors[i]}">${i+1}</span><span>${i+1}号艇</span></div><div class="boatfields">${fields.map(f=>`<label>${f[1]}<input data-field="${f[0]}" data-i="${i}" type="${f[2]}" ${f[2]==='number'?'step="any"':''} value="${f[0]==='name'?samples[i][0]:samples[i][({'national':1,'local':2,'motor':3,'exhibit':4,'st':5,'course':6})[f[0]]]}"></label>`).join('')}</div>`;boats.appendChild(div)}
+for(let i=1;i<=12;i++){let o=document.createElement('option');o.value=i;o.textContent=i+'R';document.getElementById('race').appendChild(o)}
+let currentPicks=[];
+function getData(){return [...Array(6)].map((_,i)=>{let obj={lane:i+1};document.querySelectorAll(`[data-i="${i}"]`).forEach(el=>obj[el.dataset.field]=el.dataset.field==='name'?el.value:(Number(el.value)||0));return obj})}
+function z(vals){let mean=vals.reduce((a,b)=>a+b,0)/vals.length;let sd=Math.sqrt(vals.reduce((a,b)=>a+(b-mean)**2,0)/vals.length)||1;return vals.map(v=>(v-mean)/sd)}
+function compute(){let d=getData();let keys=['national','local','motor','exhibit','st','course'];let zs={};keys.forEach(k=>zs[k]=z(d.map(x=>x[k])));let wind=Math.max(0,Math.min(15,Number(document.getElementById('wind').value)||0));let dir=document.getElementById('winddir').value;
+d.forEach((x,i)=>{x.score=.24*zs.national[i]+.15*zs.local[i]+.17*zs.motor[i]-.16*zs.exhibit[i]-.13*zs.st[i]+.15*zs.course[i];if(dir==='追い風'&&i<2)x.score+=Math.min(wind,8)*.015;if(dir==='向かい風'&&i>=2)x.score+=Math.min(wind,8)*.008});
+let ex=d.map(x=>Math.exp(Math.max(-8,Math.min(8,x.score*1.25))));let total=ex.reduce((a,b)=>a+b,0);d.forEach((x,i)=>x.win=ex[i]/total*100);let ranked=[...d].sort((a,b)=>b.score-a.score);
+let combos=[];for(let a of d)for(let b of d)for(let c of d)if(a!==b&&a!==c&&b!==c){let s=d.reduce((t,x)=>t+Math.exp(x.score*1.25),0),sa=Math.exp(a.score*1.25),sb=Math.exp(b.score*1.25),sc=Math.exp(c.score*1.25);let p=sa/s*sb/(s-sa)*sc/(s-sa-sb);combos.push({bet:`${a.lane}-${b.lane}-${c.lane}`,p:p*100})}
+currentPicks=combos.sort((a,b)=>b.p-a.p).slice(0,15);
+document.getElementById('rankings').innerHTML=ranked.map((x,i)=>`<div class="rankrow"><div><strong>${i+1}位　${x.lane}号艇 ${esc(x.name)}</strong><div class="muted">総合スコア ${x.score.toFixed(3)}</div></div><span class="pill">1着参考 ${x.win.toFixed(1)}%</span></div>`).join('');
+document.getElementById('picks').innerHTML=currentPicks.map((x,i)=>`<div class="pick"><span>${i+1}. <strong>${x.bet}</strong></span><span class="pill">${x.p.toFixed(2)}%</span></div>`).join('');
+let meta=`【${document.getElementById('venue').value} ${document.getElementById('race').value}R】\n風向：${dir} ${wind}m/s\n\n■ 総合評価\n`+ranked.map(x=>`${x.lane}号艇 ${x.name}：スコア ${x.score.toFixed(3)}／1着参考値 ${x.win.toFixed(1)}%`).join('\n')+'\n\n■ 3連単候補\n'+currentPicks.slice(0,10).map((x,i)=>`${i+1}. ${x.bet}（参考値 ${x.p.toFixed(2)}%）`).join('\n')+'\n\n※入力データに基づく試作ロジックの参考値です。的中や利益を保証するものではありません。';
+document.getElementById('noteout').value=meta;document.getElementById('results').style.display='block';}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+document.getElementById('calc').onclick=compute;
+async function copy(id){let el=document.getElementById(id);try{await navigator.clipboard.writeText(el.value||el.innerText);alert('コピーしました')}catch(e){el.select?.();alert('長押ししてコピーしてください')}}
+document.getElementById('copyPicks').onclick=()=>{let t=currentPicks.map(x=>x.bet).join('\n');let ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();alert('買い目をコピーしました')};
+document.getElementById('copyNote').onclick=()=>copy('noteout');
+function records(){try{return JSON.parse(localStorage.getItem('br_records')||'[]')}catch(e){return []}}
+function renderHistory(){let rs=records(),stake=rs.reduce((a,x)=>a+x.stake,0),pay=rs.reduce((a,x)=>a+x.payout,0);document.getElementById('count').textContent=rs.length;document.getElementById('profit').textContent=(pay-stake<0?'-¥':'¥')+Math.abs(pay-stake).toLocaleString();document.getElementById('roi').textContent=stake?(pay/stake*100).toFixed(1)+'%':'—';document.getElementById('historylist').innerHTML=rs.slice().reverse().map(x=>`<div class="rankrow"><div><strong>${esc(x.venue)} ${x.race}R</strong><div class="muted">${esc(x.actual||'結果未入力')}・${esc(x.memo||'')}</div></div><div style="text-align:right"><strong>${x.payout-x.stake>=0?'+':'-'}¥${Math.abs(x.payout-x.stake).toLocaleString()}</strong><div class="muted">${x.date}</div></div></div>`).join('')||'<p class="muted">まだ記録がありません。</p>'}
+document.getElementById('saveResult').onclick=()=>{let rs=records();rs.push({date:new Date().toLocaleDateString('ja-JP'),venue:document.getElementById('venue').value,race:document.getElementById('race').value,actual:document.getElementById('actual').value,stake:Number(document.getElementById('stake').value)||0,payout:Number(document.getElementById('payout').value)||0,memo:document.getElementById('memo').value,picks:currentPicks.map(x=>x.bet)});localStorage.setItem('br_records',JSON.stringify(rs));renderHistory();alert('記録しました')};
+document.getElementById('export').onclick=()=>{let rs=records();let csv='日付,競艇場,レース,実際の3連単,購入額,払戻額,メモ\n'+rs.map(x=>[x.date,x.venue,x.race,x.actual,x.stake,x.payout,x.memo].map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',')).join('\n');let a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'}));a.download='boat_race_history.csv';a.click();URL.revokeObjectURL(a.href)};
+document.getElementById('clear').onclick=()=>{if(confirm('すべての成績記録を削除しますか？')){localStorage.removeItem('br_records');renderHistory()}};
+document.querySelectorAll('nav button').forEach(btn=>btn.onclick=()=>{document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');['predict','history','about'].forEach(id=>document.getElementById(id).style.display=id===btn.dataset.tab?'block':'none');if(btn.dataset.tab==='history')renderHistory()});
+</script></body></html>
